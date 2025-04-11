@@ -6,6 +6,7 @@ use App\Traits\ApiResponser;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 
+use GuzzleHttp\Exception\ClientException;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Validation\ValidationException;
@@ -54,6 +55,13 @@ class Handler extends ExceptionHandler{
      * @throws \Throwable
      */
     public function render($request, Throwable $exception){
+
+        if ($exception instanceof ClientException) {
+            $message = $exception->getResponse()->getBody();
+            $code = $exception->getCode();
+            return $this->errorMessage($message,200);
+        }
+
         // http not found
         if ($exception instanceof HttpException) {
             $code = $exception->getStatusCode();
@@ -66,7 +74,7 @@ class Handler extends ExceptionHandler{
             $model = strtolower(class_basename($exception->getModel()));
             return $this->errorResponse("Does not exist any instance of {$model} with the given id",Response::HTTP_NOT_FOUND);
         }
-        
+
         // validation exception
         if ($exception instanceof ValidationException) {
             $errors = $exception->validator->errors()->getMessages();
